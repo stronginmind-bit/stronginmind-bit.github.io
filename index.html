@@ -12,17 +12,9 @@
   <body>
     <header class="site-header">
       <a class="brand" href="#top" aria-label="처음으로 이동">TS<span>.</span></a>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">
-        <span class="sr-only">메뉴 열기</span>
-        <span aria-hidden="true">☰</span>
-      </button>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav"><span class="sr-only">메뉴 열기</span><span aria-hidden="true">☰</span></button>
       <nav id="primary-nav" class="primary-nav" aria-label="주요 메뉴">
-        <a href="#about">About</a>
-        <a href="#experience">Experience</a>
-        <a href="#research">Research</a>
-        <a href="#projects">Projects</a>
-        <a href="#contact">Contact</a>
-        <a href="#games">Games</a>
+        <a href="#about">About</a><a href="#experience">Experience</a><a href="#research">Research</a><a href="#projects">Projects</a><a href="#contact">Contact</a><a href="#games">Games</a>
       </nav>
     </header>
 
@@ -34,69 +26,37 @@
         <a class="button" href="#games">Games로 이동 <span aria-hidden="true">↘</span></a>
       </section>
 
-      <section id="about" class="content-section" aria-labelledby="about-title">
-        <p class="eyebrow">01 / ABOUT</p>
-        <h2 id="about-title">말보다 결과로<br>보여주는 방식</h2>
-        <p>차분한 관찰과 집요한 문제 해결을 바탕으로, 사용자가 바로 이해할 수 있는 디지털 경험을 만듭니다.</p>
+      <section id="about" class="content-section split-section" aria-labelledby="about-title">
+        <div class="section-intro"><p class="eyebrow">01 / ABOUT</p><h2 id="about-title">말보다 결과로<br><em>보여주는 방식</em></h2></div>
+        <div class="section-detail"><p>차분한 관찰과 집요한 문제 해결을 바탕으로, 사용자가 바로 이해할 수 있는 디지털 경험을 만듭니다.</p></div>
       </section>
 
       <section id="experience" class="content-section split-section" aria-labelledby="experience-title">
-        <div>
-          <p class="eyebrow">02 / EXPERIENCE</p>
-          <h2 id="experience-title">Focused<br><em>practice.</em></h2>
-        </div>
-        <div class="stacked-copy">
-          <p>복잡한 요구를 작은 단위로 나누고, 빠르게 검증하며, 필요한 만큼만 움직이는 작업 방식을 연습합니다.</p>
-          <ul class="tag-list" aria-label="관심 영역">
-            <li>Interaction</li><li>Systems</li><li>Digital Craft</li>
-          </ul>
-        </div>
+        <div class="section-intro"><p class="eyebrow">02 / EXPERIENCE</p><h2 id="experience-title">Focused<br><em>practice.</em></h2></div>
+        <div class="section-detail"><p>복잡한 요구를 작은 단위로 나누고, 빠르게 검증하며, 필요한 만큼만 움직이는 작업 방식을 연습합니다.</p><ul class="tag-list" aria-label="관심 영역"><li>Interaction</li><li>Systems</li><li>Digital Craft</li></ul></div>
       </section>
 
-      <section id="research" class="content-section" aria-labelledby="research-title">
-        <p class="eyebrow">03 / RESEARCH</p>
-        <h2 id="research-title">Observe first.<br><em>Then move.</em></h2>
-        <p>작은 신호에서 사용자의 의도를 읽고, 인터페이스와 상호작용의 질서를 실험합니다.</p>
+      <section id="research" class="content-section split-section" aria-labelledby="research-title">
+        <div class="section-intro"><p class="eyebrow">03 / RESEARCH</p><h2 id="research-title">Observe first.<br><em>Then move.</em></h2></div>
+        <div class="section-detail"><p>작은 신호에서 사용자의 의도를 읽고, 인터페이스와 상호작용의 질서를 실험합니다.</p></div>
       </section>
 
-      <section id="projects" class="content-section project-section" aria-labelledby="projects-title">
-        <p class="eyebrow">04 / PROJECTS</p>
-        <h2 id="projects-title">Selected<br><em>experiments.</em></h2>
-        <div class="project-grid">
-          <article class="project-card"><span>01</span><h3>Quiet Interface</h3><p>정보의 우선순위를 선명하게 만드는 화면 구조 실험.</p></article>
-          <article class="project-card"><span>02</span><h3>Pixel Motion</h3><p>작은 움직임과 즉각적인 피드백을 관찰하는 게임 실험.</p></article>
-        </div>
+      <section id="projects" class="content-section split-section project-section" aria-labelledby="projects-title">
+        <div class="section-intro"><p class="eyebrow">04 / PROJECTS</p><h2 id="projects-title">Selected<br><em>experiments.</em></h2></div>
+        <div class="section-detail project-grid"><article class="project-card"><span>01</span><h3>Quiet Interface</h3><p>정보의 우선순위를 선명하게 만드는 화면 구조 실험.</p></article><article class="project-card"><span>02</span><h3>Soft Motion</h3><p>작은 움직임과 즉각적인 피드백을 관찰하는 게임 실험.</p></article></div>
       </section>
 
       <section id="games" class="content-section game-section" aria-labelledby="games-title">
-        <p class="eyebrow">05 / GAMES</p>
-        <div class="game-heading">
-          <div><h2 id="games-title">Snake<br><em>focus.</em></h2><p>방향키·WASD 또는 모바일 버튼으로 지렁이를 움직이세요.</p></div>
-          <div class="score-board" aria-live="polite"><span>Score</span><strong id="score">0</strong><span>Best</span><strong id="best-score">0</strong></div>
-        </div>
-        <div class="game-shell">
-          <div class="game-status" id="game-status" role="status">시작 버튼을 눌러 게임을 시작하세요.</div>
-          <canvas id="game-canvas" width="480" height="480" aria-label="픽셀 지렁이 게임"></canvas>
-          <div class="game-actions"><button class="button" id="start-game" type="button">시작</button><button class="button button-muted" id="pause-game" type="button" disabled>일시정지</button><button class="button button-muted" id="restart-game" type="button">재시작</button></div>
-          <div class="direction-pad" aria-label="모바일 방향 조작">
-            <button type="button" data-direction="up" aria-label="위">↑</button>
-            <button type="button" data-direction="left" aria-label="왼쪽">←</button>
-            <button type="button" data-direction="down" aria-label="아래">↓</button>
-            <button type="button" data-direction="right" aria-label="오른쪽">→</button>
-          </div>
-        </div>
+        <div class="section-intro"><p class="eyebrow">05 / GAMES</p><h2 id="games-title">Gather<br><em>grow.</em></h2></div>
+        <div class="section-detail game-detail"><p class="game-lede">먹이를 모으고, 길이를 키우고, 다음 움직임을 읽어보세요.</p><div class="game-card"><div class="game-card-top"><div class="game-status" id="game-status" role="status">시작 버튼을 눌러 게임을 시작하세요.</div><div class="score-board" aria-live="polite"><span>Score</span><strong id="score">0</strong><span>Best</span><strong id="best-score">0</strong></div></div><canvas id="game-canvas" width="480" height="480" aria-label="지렁이 게임"></canvas><div class="game-actions"><button class="button" id="start-game" type="button">시작</button><button class="button button-muted" id="pause-game" type="button" disabled>일시정지</button><button class="button button-muted" id="restart-game" type="button">재시작</button></div><div class="direction-pad" aria-label="모바일 방향 조작"><button type="button" data-direction="up" aria-label="위">↑</button><button type="button" data-direction="left" aria-label="왼쪽">←</button><button type="button" data-direction="down" aria-label="아래">↓</button><button type="button" data-direction="right" aria-label="오른쪽">→</button></div></div></div>
       </section>
 
-      <section id="contact" class="content-section contact-section" aria-labelledby="contact-title">
-        <p class="eyebrow">06 / CONTACT</p>
-        <h2 id="contact-title">Keep in<br><em>touch.</em></h2>
-        <p>연습용 프로필에서는 개인 연락처를 제공하지 않습니다. 다음 작업을 계속 지켜봐 주세요.</p>
+      <section id="contact" class="content-section split-section contact-section" aria-labelledby="contact-title">
+        <div class="section-intro"><p class="eyebrow">06 / CONTACT</p><h2 id="contact-title">Keep in<br><em>touch.</em></h2></div>
+        <div class="section-detail"><p>연습용 프로필에서는 개인 연락처를 제공하지 않습니다. 다음 작업을 계속 지켜봐 주세요.</p></div>
       </section>
     </main>
 
-    <footer class="site-footer">
-      <p>© 2026 TAE-SIK / Personal Practice</p>
-      <p class="fiction-note">연습 목적의 가상 프로필입니다.</p>
-    </footer>
+    <footer class="site-footer"><p>© 2026 TAE-SIK / Personal Practice</p><p class="fiction-note">연습 목적의 가상 프로필입니다.</p></footer>
   </body>
 </html>

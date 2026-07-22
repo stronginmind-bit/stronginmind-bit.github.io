@@ -46,12 +46,12 @@
     draw();
   }
   function endGame() { clearInterval(timer); state = "gameover"; pauseButton.disabled = true; saveBestScore(); bestElement.textContent = String(bestScore); setStatus("게임 오버 — 재시작해서 다시 도전하세요.", true); draw(); }
-  function drawCell(position, color, inset = 1) { context.fillStyle = color; context.fillRect(position.x * cellSize + inset, position.y * cellSize + inset, cellSize - inset * 2, cellSize - inset * 2); }
+  function drawCell(position, color, inset = 2, glow = 0) { const centerX = position.x * cellSize + cellSize / 2; const centerY = position.y * cellSize + cellSize / 2; const radius = cellSize / 2 - inset; context.beginPath(); context.fillStyle = color; context.shadowColor = color; context.shadowBlur = glow; context.arc(centerX, centerY, radius, 0, Math.PI * 2); context.fill(); context.shadowBlur = 0; }
   function draw() {
-    context.fillStyle = "#151813"; context.fillRect(0, 0, canvas.width, canvas.height); context.strokeStyle = "rgba(242,239,231,.06)";
-    for (let i = 0; i <= gridSize; i += 1) { context.beginPath(); context.moveTo(i * cellSize, 0); context.lineTo(i * cellSize, canvas.height); context.stroke(); context.beginPath(); context.moveTo(0, i * cellSize); context.lineTo(canvas.width, i * cellSize); context.stroke(); }
-    drawCell(food, "#d6e94c", 3); snake.forEach((part, index) => drawCell(part, index === 0 ? "#f2efe7" : "#9bb32f", 2));
-    effects.forEach(effect => { context.globalAlpha = effect.life; drawCell({x:effect.x,y:effect.y}, ["#f44336","#ff9800","#ffeb3b","#4caf50","#2196f3","#9c27b0"][Math.floor(effect.life * 6) % 6], 1); }); context.globalAlpha = 1;
+    const background = context.createRadialGradient(canvas.width * .5, canvas.height * .35, 10, canvas.width * .5, canvas.height * .5, canvas.width * .7); background.addColorStop(0, "#164b48"); background.addColorStop(1, "#081416"); context.fillStyle = background; context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "rgba(214,233,76,.12)"; for (let x = 24; x < canvas.width; x += 48) for (let y = 24; y < canvas.height; y += 48) { context.beginPath(); context.arc(x, y, 1.5, 0, Math.PI * 2); context.fill(); }
+    drawCell(food, "#d6e94c", 4, 14); snake.forEach((part, index) => drawCell(part, index === 0 ? "#f7fff0" : "#8ccf75", index === 0 ? 2 : 3, index === 0 ? 10 : 3));
+    effects.forEach(effect => { const centerX = effect.x * cellSize + cellSize / 2; const centerY = effect.y * cellSize + cellSize / 2; const radius = cellSize * (1.2 - effect.life * .45); const colors = ["#ff5f6d","#ffc371","#f9f871","#7bed9f","#70a1ff","#c56cf0"]; context.globalAlpha = effect.life; context.strokeStyle = colors[Math.floor(effect.life * colors.length) % colors.length]; context.lineWidth = 3; context.beginPath(); context.arc(centerX, centerY, radius, 0, Math.PI * 2); context.stroke(); context.globalAlpha = 1; });
   }
   startButton.addEventListener("click", startGame); pauseButton.addEventListener("click", pauseGame); restartButton.addEventListener("click", restartGame); document.addEventListener("keydown", handleKey); canvas.addEventListener("touchstart", handleTouchStart, {passive:true}); canvas.addEventListener("touchend", handleTouchEnd, {passive:true});
   document.querySelectorAll("[data-direction]").forEach(button => { button.addEventListener("click", () => setDirection(button.dataset.direction)); button.addEventListener("touchstart", event => { event.preventDefault(); setDirection(button.dataset.direction); }, {passive:false}); });

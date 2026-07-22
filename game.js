@@ -3,57 +3,285 @@
 (() => {
   const canvas = document.querySelector("#game-canvas");
   if (!canvas) return;
+
   const context = canvas.getContext("2d");
   const scoreElement = document.querySelector("#score");
   const bestElement = document.querySelector("#best-score");
+  const livesElement = document.querySelector("#lives");
   const statusElement = document.querySelector("#game-status");
   const startButton = document.querySelector("#start-game");
   const pauseButton = document.querySelector("#pause-game");
   const restartButton = document.querySelector("#restart-game");
-  const gridSize = 24;
-  const cellSize = canvas.width / gridSize;
-  const tickMs = 145;
-  const directions = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
-  const opposite = { up:"down", down:"up", left:"right", right:"left" };
-  let snake, food, direction, queuedDirection, score, timer, state, effects, touchStart, bestScore = getBestScore();
+  const soundButton = document.querySelector("#sound-toggle");
+  const width = canvas.width;
+  const height = canvas.height;
+  const player = { x: width / 2, y: height - 54, width: 30, height: 18, speed: 6 };
+  const keys = new Set();
+  const bullets = [];
+  const enemies = [];
+  const particles = [];
+  let score = 0;
+  let lives = 3;
+  let bestScore = getBestScore();
+  let state = "ready";
+  let timer = null;
+  let lastTime = 0;
+  let enemyDirection = 1;
+  let enemyStepClock = 0;
+  let fireClock = 0;
+  let touchStart = null;
+  let soundEnabled = true;
+  let audioContext;
 
-  function getBestScore() { const saved = Number.parseInt(localStorage.getItem("taesik-snake-best") || "0", 10); return Number.isFinite(saved) ? saved : 0; }
-  function saveBestScore() { if (score > bestScore) { bestScore = score; localStorage.setItem("taesik-snake-best", String(bestScore)); } }
-  function setStatus(message, danger = false) { statusElement.textContent = message; statusElement.classList.toggle("is-danger", danger); }
-  function samePosition(a, b) { return a.x === b.x && a.y === b.y; }
-  function randomCell() { return { x:Math.floor(Math.random() * gridSize), y:Math.floor(Math.random() * gridSize) }; }
-  function occupied(position) { return snake.some(part => samePosition(part, position)); }
-  function freeCell() { let position = randomCell(); while (occupied(position) || samePosition(position, food)) position = randomCell(); return position; }
-  function resetGame() {
-    snake = [{x:12,y:12},{x:11,y:12},{x:10,y:12}]; food = {x:17,y:12};
-    direction = "right"; queuedDirection = "right"; score = 0; effects = []; state = "ready";
-    scoreElement.textContent = "0"; bestElement.textContent = String(bestScore); pauseButton.disabled = true; draw(); setStatus("시작 버튼을 눌러 게임을 시작하세요.");
+  function getBestScore() {
+    const saved = Number.parseInt(localStorage.getItem("taesik-galaga-best") || "0", 10);
+    return Number.isFinite(saved) ? saved : 0;
   }
-  function startGame() { if (state === "running") return; if (state === "gameover" || state === "ready") resetGame(); state = "running"; pauseButton.disabled = false; setStatus("집중해서 먹이를 모으세요."); clearInterval(timer); timer = setInterval(step, tickMs); draw(); }
-  function pauseGame() { if (state === "running") { state = "paused"; clearInterval(timer); pauseButton.textContent = "계속"; setStatus("일시정지됨"); } else if (state === "paused") { state = "running"; pauseButton.textContent = "일시정지"; setStatus("다시 시작합니다."); clearInterval(timer); timer = setInterval(step, tickMs); } }
-  function restartGame() { clearInterval(timer); pauseButton.textContent = "일시정지"; resetGame(); startGame(); }
-  function setDirection(next) { if (!directions[next] || state === "gameover") return; if (opposite[direction] !== next) queuedDirection = next; }
-  function handleKey(event) { const keyMap = { ArrowUp:"up", w:"up", W:"up", ArrowDown:"down", s:"down", S:"down", ArrowLeft:"left", a:"left", A:"left", ArrowRight:"right", d:"right", D:"right", " ":"pause" }; const next = keyMap[event.key]; if (!next) return; event.preventDefault(); if (next === "pause") pauseGame(); else setDirection(next); }
-  function handleTouchStart(event) { const touch = event.changedTouches[0]; touchStart = {x:touch.clientX,y:touch.clientY}; }
-  function handleTouchEnd(event) { if (!touchStart) return; const touch = event.changedTouches[0]; const deltaX = touch.clientX - touchStart.x; const deltaY = touch.clientY - touchStart.y; touchStart = null; if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 24) return; if (Math.abs(deltaX) > Math.abs(deltaY)) setDirection(deltaX > 0 ? "right" : "left"); else setDirection(deltaY > 0 ? "down" : "up"); }
-  function addEffect(position) { effects.push({x:position.x,y:position.y,life:1}); }
-  function step() {
-    direction = queuedDirection; const vector = directions[direction]; const head = {x:snake[0].x + vector.x,y:snake[0].y + vector.y};
-    effects = effects.map(effect => ({...effect,life:effect.life - .12})).filter(effect => effect.life > 0);
-    const hitWall = head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize; const hitSelf = snake.some(part => samePosition(part, head));
-    if (hitWall || hitSelf) { endGame(); return; }
-    snake.unshift(head); if (samePosition(head, food)) { score += 10; scoreElement.textContent = String(score); addEffect(head); food = freeCell(); } else snake.pop();
+
+  function saveBestScore() {
+    if (score > bestScore) {
+      bestScore = score;
+      localStorage.setItem("taesik-galaga-best", String(bestScore));
+    }
+  }
+
+  function setStatus(message, danger = false) {
+    statusElement.textContent = message;
+    statusElement.classList.toggle("is-danger", danger);
+  }
+
+  function makeEnemies() {
+    enemies.length = 0;
+    const colors = ["#ff6b7d", "#ffad66", "#c58cff"];
+    for (let row = 0; row < 4; row += 1) {
+      for (let column = 0; column < 7; column += 1) {
+        enemies.push({ x: 76 + column * 54, y: 62 + row * 34, width: 24, height: 18, color: colors[row % colors.length], row, alive: true });
+      }
+    }
+  }
+
+  function resetGame() {
+    clearInterval(timer);
+    bullets.length = 0;
+    particles.length = 0;
+    score = 0;
+    lives = 3;
+    player.x = width / 2;
+    enemyDirection = 1;
+    enemyStepClock = 0;
+    fireClock = 0;
+    state = "ready";
+    makeEnemies();
+    scoreElement.textContent = "0";
+    livesElement.textContent = String(lives);
+    bestElement.textContent = String(bestScore);
+    pauseButton.disabled = true;
+    pauseButton.textContent = "일시정지";
+    setStatus("시작 버튼을 눌러 출격하세요.");
     draw();
   }
-  function endGame() { clearInterval(timer); state = "gameover"; pauseButton.disabled = true; saveBestScore(); bestElement.textContent = String(bestScore); setStatus("게임 오버 — 재시작해서 다시 도전하세요.", true); draw(); }
-  function drawCell(position, color, inset = 2, glow = 0) { const centerX = position.x * cellSize + cellSize / 2; const centerY = position.y * cellSize + cellSize / 2; const radius = cellSize / 2 - inset; context.beginPath(); context.fillStyle = color; context.shadowColor = color; context.shadowBlur = glow; context.arc(centerX, centerY, radius, 0, Math.PI * 2); context.fill(); context.shadowBlur = 0; }
-  function draw() {
-    const background = context.createRadialGradient(canvas.width * .5, canvas.height * .35, 10, canvas.width * .5, canvas.height * .5, canvas.width * .7); background.addColorStop(0, "#164b48"); background.addColorStop(1, "#081416"); context.fillStyle = background; context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "rgba(214,233,76,.12)"; for (let x = 24; x < canvas.width; x += 48) for (let y = 24; y < canvas.height; y += 48) { context.beginPath(); context.arc(x, y, 1.5, 0, Math.PI * 2); context.fill(); }
-    drawCell(food, "#d6e94c", 4, 14); snake.forEach((part, index) => drawCell(part, index === 0 ? "#f7fff0" : "#8ccf75", index === 0 ? 2 : 3, index === 0 ? 10 : 3));
-    effects.forEach(effect => { const centerX = effect.x * cellSize + cellSize / 2; const centerY = effect.y * cellSize + cellSize / 2; const radius = cellSize * (1.2 - effect.life * .45); const colors = ["#ff5f6d","#ffc371","#f9f871","#7bed9f","#70a1ff","#c56cf0"]; context.globalAlpha = effect.life; context.strokeStyle = colors[Math.floor(effect.life * colors.length) % colors.length]; context.lineWidth = 3; context.beginPath(); context.arc(centerX, centerY, radius, 0, Math.PI * 2); context.stroke(); context.globalAlpha = 1; });
+
+  function ensureAudio() {
+    if (!soundEnabled) return null;
+    if (!audioContext) audioContext = new AudioContext();
+    if (audioContext.state === "suspended") audioContext.resume();
+    return audioContext;
   }
-  startButton.addEventListener("click", startGame); pauseButton.addEventListener("click", pauseGame); restartButton.addEventListener("click", restartGame); document.addEventListener("keydown", handleKey); canvas.addEventListener("touchstart", handleTouchStart, {passive:true}); canvas.addEventListener("touchend", handleTouchEnd, {passive:true});
-  document.querySelectorAll("[data-direction]").forEach(button => { button.addEventListener("click", () => setDirection(button.dataset.direction)); button.addEventListener("touchstart", event => { event.preventDefault(); setDirection(button.dataset.direction); }, {passive:false}); });
+
+  function beep(frequency, duration, type = "square", volume = 0.025) {
+    const audio = ensureAudio();
+    if (!audio) return;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(volume, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + duration);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start();
+    oscillator.stop(audio.currentTime + duration);
+  }
+
+  function startGame() {
+    if (state === "running") return;
+    if (state === "gameover" || state === "ready" || enemies.every(enemy => !enemy.alive)) resetGame();
+    state = "running";
+    pauseButton.disabled = false;
+    setStatus("출격 중 — 적 편대를 정리하세요.");
+    beep(440, 0.12, "sawtooth", 0.02);
+    clearInterval(timer);
+    timer = setInterval(() => update(16), 16);
+  }
+
+  function pauseGame() {
+    if (state === "running") {
+      state = "paused";
+      setStatus("일시정지됨.");
+      pauseButton.textContent = "계속";
+    } else if (state === "paused") {
+      state = "running";
+      setStatus("출격 중 — 적 편대를 정리하세요.");
+      pauseButton.textContent = "일시정지";
+    }
+  }
+
+  function restartGame() {
+    resetGame();
+    startGame();
+  }
+
+  function fire() {
+    if (state !== "running" || fireClock > 0 || bullets.length > 3) return;
+    bullets.push({ x: player.x, y: player.y - 18, width: 3, height: 12, speed: 8 });
+    fireClock = 180;
+    beep(760, 0.06, "square", 0.018);
+  }
+
+  function movePlayer(amount) {
+    player.x = Math.max(24, Math.min(width - 24, player.x + amount));
+  }
+
+  function handleKey(event) {
+    const key = event.key;
+    if (["ArrowLeft", "ArrowRight", "a", "A", "d", "D", " "].includes(key)) event.preventDefault();
+    if (key === " ") return state === "paused" ? pauseGame() : fire();
+    keys.add(key);
+    if (["p", "P"].includes(key)) pauseGame();
+  }
+
+  function handleKeyUp(event) { keys.delete(event.key); }
+
+  function setDirection(direction) {
+    if (direction === "left") movePlayer(-32);
+    if (direction === "right") movePlayer(32);
+    if (direction === "fire") fire();
+  }
+
+  function handleTouchStart(event) {
+    const touch = event.changedTouches[0];
+    touchStart = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function handleTouchEnd(event) {
+    if (!touchStart) return;
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStart.x;
+    const deltaY = touch.clientY - touchStart.y;
+    touchStart = null;
+    if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 24) return fire();
+    if (Math.abs(deltaX) > Math.abs(deltaY)) setDirection(deltaX > 0 ? "right" : "left");
+  }
+
+  function overlaps(a, b) {
+    return Math.abs(a.x - b.x) < (a.width + b.width) / 2 && Math.abs(a.y - b.y) < (a.height + b.height) / 2;
+  }
+
+  function addBurst(x, y, color) {
+    const colors = ["#ff4d6d", "#ffcf56", "#73e2a7", "#57b9ff", "#c58cff", color];
+    for (let index = 0; index < 20; index += 1) {
+      const angle = (Math.PI * 2 * index) / 20;
+      particles.push({ x, y, vx: Math.cos(angle) * (1 + Math.random() * 2), vy: Math.sin(angle) * (1 + Math.random() * 2), life: 1, color: colors[index % colors.length] });
+    }
+  }
+
+  function update(delta) {
+    if (state !== "running") return;
+    const now = performance.now();
+    if (!lastTime) lastTime = now;
+    const elapsed = Math.min(delta, 32);
+    lastTime = now;
+    if (keys.has("ArrowLeft") || keys.has("a") || keys.has("A")) movePlayer(-player.speed);
+    if (keys.has("ArrowRight") || keys.has("d") || keys.has("D")) movePlayer(player.speed);
+    if (keys.has(" ")) fire();
+    fireClock = Math.max(0, fireClock - elapsed);
+    bullets.forEach(bullet => { bullet.y -= bullet.speed; });
+    while (bullets.length && bullets[0].y < -20) bullets.shift();
+    enemyStepClock += elapsed;
+    if (enemyStepClock > 600) {
+      enemyStepClock = 0;
+      const living = enemies.filter(enemy => enemy.alive);
+      const nextEdge = living.some(enemy => enemy.x + enemyDirection * 20 > width - 28 || enemy.x + enemyDirection * 20 < 28);
+      if (nextEdge) { enemyDirection *= -1; living.forEach(enemy => { enemy.y += 12; }); }
+      living.forEach(enemy => { enemy.x += enemyDirection * 14; });
+    }
+    bullets.forEach(bullet => {
+      enemies.forEach(enemy => {
+        if (enemy.alive && overlaps(bullet, enemy)) {
+          enemy.alive = false;
+          bullet.y = -30;
+          score += 10;
+          scoreElement.textContent = String(score);
+          addBurst(enemy.x, enemy.y, enemy.color);
+          beep(180 + score * 2, 0.08, "triangle", 0.018);
+        }
+      });
+    });
+    const living = enemies.filter(enemy => enemy.alive);
+    if (living.some(enemy => enemy.y + enemy.height / 2 >= player.y - 22)) return endGame();
+    if (!living.length) { saveBestScore(); bestElement.textContent = String(bestScore); state = "ready"; setStatus("편대 격추 완료 — 다시 출격할까요?"); beep(880, 0.2, "triangle", 0.025); }
+    particles.forEach(particle => { particle.x += particle.vx; particle.y += particle.vy; particle.life -= 0.035; });
+    while (particles.length && particles[0].life <= 0) particles.shift();
+    draw();
+  }
+
+  function endGame() {
+    clearInterval(timer);
+    state = "gameover";
+    pauseButton.disabled = true;
+    saveBestScore();
+    bestElement.textContent = String(bestScore);
+    setStatus("게임 오버 — 재시작 후 다시 도전하세요.", true);
+    beep(100, 0.25, "sawtooth", 0.025);
+    draw();
+  }
+
+  function drawPlayer() {
+    context.save();
+    context.translate(player.x, player.y);
+    context.fillStyle = "#d6e94c";
+    context.shadowColor = "#d6e94c";
+    context.shadowBlur = 14;
+    context.beginPath();
+    context.moveTo(0, -18); context.lineTo(18, 12); context.lineTo(7, 9); context.lineTo(0, 17); context.lineTo(-7, 9); context.lineTo(-18, 12); context.closePath(); context.fill();
+    context.fillStyle = "#f7fff0";
+    context.fillRect(-2, -5, 4, 13);
+    context.restore();
+  }
+
+  function drawEnemy(enemy) {
+    context.save();
+    context.translate(enemy.x, enemy.y);
+    context.fillStyle = enemy.color;
+    context.shadowColor = enemy.color;
+    context.shadowBlur = 10;
+    context.beginPath();
+    context.moveTo(0, -11); context.lineTo(14, -4); context.lineTo(10, 10); context.lineTo(0, 5); context.lineTo(-10, 10); context.lineTo(-14, -4); context.closePath(); context.fill();
+    context.fillStyle = "#081416";
+    context.fillRect(-8, -3, 4, 4); context.fillRect(4, -3, 4, 4);
+    context.restore();
+  }
+
+  function draw() {
+    const background = context.createLinearGradient(0, 0, 0, height);
+    background.addColorStop(0, "#102e3a"); background.addColorStop(1, "#060b12");
+    context.fillStyle = background; context.fillRect(0, 0, width, height);
+    context.fillStyle = "rgba(255,255,255,.42)";
+    for (let index = 0; index < 45; index += 1) { const x = (index * 83) % width; const y = (index * 47) % height; context.fillRect(x, y, index % 3 === 0 ? 2 : 1, 1); }
+    context.fillStyle = "rgba(214,233,76,.07)"; context.fillRect(20, height - 82, width - 40, 1);
+    enemies.filter(enemy => enemy.alive).forEach(drawEnemy);
+    bullets.forEach(bullet => { context.fillStyle = "#f7fff0"; context.shadowColor = "#d6e94c"; context.shadowBlur = 12; context.fillRect(bullet.x - 1.5, bullet.y - bullet.height / 2, bullet.width, bullet.height); context.shadowBlur = 0; });
+    particles.forEach(particle => { context.globalAlpha = particle.life; context.fillStyle = particle.color; context.fillRect(particle.x, particle.y, 3, 3); }); context.globalAlpha = 1;
+    drawPlayer();
+  }
+
+  startButton.addEventListener("click", startGame);
+  pauseButton.addEventListener("click", pauseGame);
+  restartButton.addEventListener("click", restartGame);
+  soundButton.addEventListener("click", () => { soundEnabled = !soundEnabled; soundButton.textContent = soundEnabled ? "사운드 켜짐" : "사운드 꺼짐"; if (soundEnabled) beep(520, 0.08); });
+  document.addEventListener("keydown", handleKey);
+  document.addEventListener("keyup", handleKeyUp);
+  canvas.addEventListener("touchstart", handleTouchStart, { passive: true });
+  canvas.addEventListener("touchend", handleTouchEnd, { passive: true });
+  document.querySelectorAll("[data-direction]").forEach(button => { button.addEventListener("click", () => setDirection(button.dataset.direction)); });
   resetGame();
 })();
